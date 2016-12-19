@@ -1,4 +1,7 @@
-Nginx virtual host traffic status module
+Ultralab fork of the Nginx virtual host traffic status module
+
+ -  2xx/204 counters separation
+
 ==========
 
 [![License](http://img.shields.io/badge/license-BSD-brightgreen.svg)](https://github.com/vozlt/nginx-module-vts/blob/master/LICENSE)
