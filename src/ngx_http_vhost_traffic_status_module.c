@@ -82,6 +82,7 @@
     "\"outBytes\":%uA,"                                                        \
     "\"responses\":{"                                                          \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -102,6 +103,7 @@
     "\"inBytes\":%uA,"                                                         \
     "\"outBytes\":%uA,"                                                        \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -124,6 +126,7 @@
     "\"outBytes\":%uA,"                                                        \
     "\"responses\":{"                                                          \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -136,6 +139,7 @@
     "\"inBytes\":%uA,"                                                         \
     "\"outBytes\":%uA,"                                                        \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -154,6 +158,7 @@
     "\"outBytes\":%uA,"                                                        \
     "\"responses\":{"                                                          \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -172,6 +177,7 @@
     "\"inBytes\":%uA,"                                                         \
     "\"outBytes\":%uA,"                                                        \
     "\"1xx\":%uA,"                                                             \
+    "\"200\":%uA,"                                                             \
     "\"204\":%uA,"                                                             \
     "\"2xx\":%uA,"                                                             \
     "\"3xx\":%uA,"                                                             \
@@ -215,6 +221,7 @@
 
 #define ngx_http_vhost_traffic_status_add_rc(s, n) {                           \
     if(s < 200) {n->stat_1xx_counter++;}                                       \
+    else if(s == 200) {n->stat_200_counter++;}                                 \
     else if(s == 204) {n->stat_204_counter++;}                                 \
     else if(s < 300) {n->stat_2xx_counter++;}                                  \
     else if(s < 400) {n->stat_3xx_counter++;}                                  \
@@ -279,6 +286,9 @@
     if (o->stat_1xx_counter > c->stat_1xx_counter) {                           \
         c->stat_1xx_counter_oc++;                                              \
     }                                                                          \
+    if (o->stat_200_counter > c->stat_200_counter) {                           \
+        c->stat_200_counter_oc++;                                              \
+    }                                                                          \
     if (o->stat_204_counter > c->stat_204_counter) {                           \
         c->stat_204_counter_oc++;                                              \
     }                                                                          \
@@ -333,6 +343,9 @@
     }                                                                          \
     if (o->stat_1xx_counter > c->stat_1xx_counter) {                           \
         c->stat_1xx_counter_oc++;                                              \
+    }                                                                          \
+    if (o->stat_200_counter > c->stat_200_counter) {                           \
+        c->stat_200_counter_oc++;                                              \
     }                                                                          \
     if (o->stat_204_counter > c->stat_204_counter) {                           \
         c->stat_204_counter_oc++;                                              \
@@ -460,6 +473,7 @@ typedef struct {
     ngx_atomic_t                                     stat_in_bytes;
     ngx_atomic_t                                     stat_out_bytes;
     ngx_atomic_t                                     stat_1xx_counter;
+    ngx_atomic_t                                     stat_200_counter;
     ngx_atomic_t                                     stat_204_counter;
     ngx_atomic_t                                     stat_2xx_counter;
     ngx_atomic_t                                     stat_3xx_counter;
@@ -471,6 +485,7 @@ typedef struct {
     ngx_atomic_t                                     stat_in_bytes_oc;
     ngx_atomic_t                                     stat_out_bytes_oc;
     ngx_atomic_t                                     stat_1xx_counter_oc;
+    ngx_atomic_t                                     stat_200_counter_oc;
     ngx_atomic_t                                     stat_204_counter_oc;
     ngx_atomic_t                                     stat_2xx_counter_oc;
     ngx_atomic_t                                     stat_3xx_counter_oc;
@@ -882,6 +897,11 @@ static ngx_http_variable_t  ngx_http_vhost_traffic_status_vars[] = {
     { ngx_string("vts_1xx_counter"), NULL,
       ngx_http_vhost_traffic_status_node_variable,
       offsetof(ngx_http_vhost_traffic_status_node_t, stat_1xx_counter),
+      NGX_HTTP_VAR_NOCACHEABLE, 0 },
+
+    { ngx_string("vts_200_counter"), NULL,
+      ngx_http_vhost_traffic_status_node_variable,
+      offsetof(ngx_http_vhost_traffic_status_node_t, stat_200_counter),
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
     { ngx_string("vts_204_counter"), NULL,
@@ -1803,6 +1823,10 @@ ngx_http_vhost_traffic_status_node_member(ngx_http_vhost_traffic_status_node_t *
     {
         return vtsn->stat_1xx_counter;
     }
+    else if (ngx_http_vhost_traffic_status_node_member_cmp(member, "200") == 0)
+    {
+        return vtsn->stat_200_counter;
+    }
     else if (ngx_http_vhost_traffic_status_node_member_cmp(member, "204") == 0)
     {
         return vtsn->stat_204_counter;
@@ -2484,6 +2508,7 @@ ngx_http_vhost_traffic_status_node_zero(ngx_http_vhost_traffic_status_node_t *vt
     vtsn->stat_in_bytes = 0;
     vtsn->stat_out_bytes = 0;
     vtsn->stat_1xx_counter = 0;
+    vtsn->stat_200_counter = 0;
     vtsn->stat_204_counter = 0;
     vtsn->stat_2xx_counter = 0;
     vtsn->stat_3xx_counter = 0;
@@ -2494,6 +2519,7 @@ ngx_http_vhost_traffic_status_node_zero(ngx_http_vhost_traffic_status_node_t *vt
     vtsn->stat_in_bytes_oc = 0;
     vtsn->stat_out_bytes_oc = 0;
     vtsn->stat_1xx_counter_oc = 0;
+    vtsn->stat_200_counter = 0;
     vtsn->stat_204_counter_oc = 0;
     vtsn->stat_2xx_counter_oc = 0;
     vtsn->stat_3xx_counter_oc = 0;
@@ -3599,6 +3625,7 @@ ngx_http_vhost_traffic_status_display_set_server_node(
                       vtsn->stat_in_bytes,
                       vtsn->stat_out_bytes,
                       vtsn->stat_1xx_counter,
+                      vtsn->stat_200_counter,
                       vtsn->stat_204_counter,
                       vtsn->stat_2xx_counter,
                       vtsn->stat_3xx_counter,
@@ -3617,6 +3644,7 @@ ngx_http_vhost_traffic_status_display_set_server_node(
                       vtsn->stat_in_bytes_oc,
                       vtsn->stat_out_bytes_oc,
                       vtsn->stat_1xx_counter_oc,
+                      vtsn->stat_200_counter_oc,
                       vtsn->stat_204_counter_oc,
                       vtsn->stat_2xx_counter_oc,
                       vtsn->stat_3xx_counter_oc,
@@ -3636,6 +3664,7 @@ ngx_http_vhost_traffic_status_display_set_server_node(
                       vtsn->stat_in_bytes,
                       vtsn->stat_out_bytes,
                       vtsn->stat_1xx_counter,
+                      vtsn->stat_200_counter,
                       vtsn->stat_204_counter,
                       vtsn->stat_2xx_counter,
                       vtsn->stat_3xx_counter,
@@ -3646,6 +3675,7 @@ ngx_http_vhost_traffic_status_display_set_server_node(
                       vtsn->stat_in_bytes_oc,
                       vtsn->stat_out_bytes_oc,
                       vtsn->stat_1xx_counter_oc,
+                      vtsn->stat_200_counter_oc,
                       vtsn->stat_204_counter_oc,
                       vtsn->stat_2xx_counter_oc,
                       vtsn->stat_3xx_counter_oc,
@@ -3686,6 +3716,7 @@ ngx_http_vhost_traffic_status_display_set_server(ngx_http_request_t *r,
             vtscf->stats.stat_in_bytes += vtsn->stat_in_bytes;
             vtscf->stats.stat_out_bytes += vtsn->stat_out_bytes;
             vtscf->stats.stat_1xx_counter += vtsn->stat_1xx_counter;
+            vtscf->stats.stat_200_counter += vtsn->stat_200_counter;
             vtscf->stats.stat_204_counter += vtsn->stat_204_counter;
             vtscf->stats.stat_2xx_counter += vtsn->stat_2xx_counter;
             vtscf->stats.stat_3xx_counter += vtsn->stat_3xx_counter;
@@ -3696,6 +3727,7 @@ ngx_http_vhost_traffic_status_display_set_server(ngx_http_request_t *r,
             vtscf->stats.stat_in_bytes_oc += vtsn->stat_in_bytes_oc;
             vtscf->stats.stat_out_bytes_oc += vtsn->stat_out_bytes_oc;
             vtscf->stats.stat_1xx_counter_oc += vtsn->stat_1xx_counter_oc;
+            vtscf->stats.stat_200_counter_oc += vtsn->stat_200_counter_oc;
             vtscf->stats.stat_204_counter_oc += vtsn->stat_204_counter_oc;
             vtscf->stats.stat_2xx_counter_oc += vtsn->stat_2xx_counter_oc;
             vtscf->stats.stat_3xx_counter_oc += vtsn->stat_3xx_counter_oc;
@@ -3866,7 +3898,7 @@ ngx_http_vhost_traffic_status_display_set_upstream_node(ngx_http_request_t *r,
         buf = ngx_sprintf(buf, NGX_HTTP_VHOST_TRAFFIC_STATUS_JSON_FMT_UPSTREAM,
                 &key, vtsn->stat_request_counter,
                 vtsn->stat_in_bytes, vtsn->stat_out_bytes,
-                vtsn->stat_1xx_counter, vtsn->stat_204_counter,
+                vtsn->stat_1xx_counter, vtsn->stat_200_counter, vtsn->stat_204_counter,
                 vtsn->stat_2xx_counter, vtsn->stat_3xx_counter,
                 vtsn->stat_4xx_counter, vtsn->stat_5xx_counter,
                 vtsn->stat_upstream.rtms,
@@ -3876,7 +3908,7 @@ ngx_http_vhost_traffic_status_display_set_upstream_node(ngx_http_request_t *r,
                 ngx_http_vhost_traffic_status_boolean_to_string(us->down),
                 ngx_http_vhost_traffic_status_max_integer,
                 vtsn->stat_request_counter_oc, vtsn->stat_in_bytes_oc,
-                vtsn->stat_out_bytes_oc, vtsn->stat_1xx_counter_oc,
+                vtsn->stat_out_bytes_oc, vtsn->stat_1xx_counter_oc, vtsn->stat_200_counter,
                 vtsn->stat_204_counter_oc, vtsn->stat_2xx_counter_oc, vtsn->stat_3xx_counter_oc,
                 vtsn->stat_4xx_counter_oc, vtsn->stat_5xx_counter_oc);
 
@@ -4186,6 +4218,7 @@ static u_char
                       vtsn->stat_in_bytes_oc,
                       vtsn->stat_out_bytes_oc,
                       vtsn->stat_1xx_counter_oc,
+                      vtsn->stat_200_counter_oc,
                       vtsn->stat_204_counter_oc,
                       vtsn->stat_2xx_counter_oc,
                       vtsn->stat_3xx_counter_oc,
